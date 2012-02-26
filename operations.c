@@ -404,6 +404,21 @@ void setFrequency(usb_dev_handle * handle, double frequency)
 	}
 }
 
+void setRegisters(usb_dev_handle * handle, unsigned char regs[6])
+{
+  int request = REQUEST_SET_FREQ;
+  int value = 0x700 + i2cAddress;
+  int index = 0;
+  if (verbose)
+    printf("Setting Si570 registers to: %d %d %d %d %d %d\n", regs[0], regs[1], regs[2], regs[3], regs[4], regs[5]);
+	
+  if (usb_control_msg(handle, USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT, request, value, index, regs, sizeof(regs), 5000)) {
+    if (verbose >= 2) printBuffer(regs, 2);
+  } else {
+    fprintf(stderr, "Failed writing frequency to device\n");
+  }
+}
+
 void setFreqByValue(usb_dev_handle * handle, double frequency)
 {	
 	char buffer[4];

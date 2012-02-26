@@ -132,6 +132,7 @@ static void usage(char *name)
   fprintf(stderr, "  set lpf_addr <band> <filter>                   \"     \n");
   fprintf(stderr, "  set lpf_point <crossover> <f in MHz>           \"     \n");
   fprintf(stderr, "  set freq <frequency in MHz>\n");
+  fprintf(stderr, "  set registers <reg0> <reg1> <reg2> <reg3> <reg4> <reg5>\n");
   fprintf(stderr, "  set si570_addr <i2c address in decimal>\n");
   fprintf(stderr, "  set si570_multiplier [band] <decimal factor>  (PE0FKO>=15.12+Mobo)\n");
   fprintf(stderr, "  set startup <frequency in MHz>         (PE0FKO+TF3LJ+Mobo)\n");
@@ -217,6 +218,12 @@ else if ((strcmp(argv[0], "set") == 0) && (argc >= 2)) {
       
     } else if (strcmp(argv[1], "local_multiplier") == 0) {
       multiplier = atof(argv[2]);
+    } else if (strcmp(argv[1], "registers") == 0 || strcmp(argv[1], "regs") == 0) {
+      unsigned char regs[6];
+      int i;
+      for (i = 0; i < 6; i += 1)
+	regs[i] = strtol(argv[2+i], NULL, 0);
+      setRegisters(handle, regs);
     } else {
       sprintf(result, "error");
       return -1;
