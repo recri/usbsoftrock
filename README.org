@@ -3,7 +3,8 @@
 
   The source was pulled from the svn repository there on 2012-02-26.
 
-  The principle changes will be three new commands:
+  The principle changes would have been three new commands, but they turn out to
+  be impossible with the current softrock firmware:
 
   set registers <reg0> <reg1> <reg2> <reg3> <reg4> <reg5>
   - a command for directly setting the Si570 registers.
@@ -25,3 +26,10 @@
  from frequencies and frequencies from register values, so these computations
  would all use the same logic.
 
+ This project turns out to be impossible because the current pe0fko firmware
+ translates incoming register settings into frequency, assuming that the
+ sender is using an uncalibrated Si570 crystal frequency, and then translates
+ the frequency into a new set of register settings.  So it's impossible to
+ directly program the Si570 using the pe0fko firmware.  Hence it's impossible
+ to experiment with spur reduction by moving the Si570 to an alternate register
+ setting.
