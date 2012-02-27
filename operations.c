@@ -178,23 +178,57 @@ void printBuffer(char * buffer, int length)
 	}
 }
 
-double calculateFrequency(unsigned char * buffer) {
+void registersToSolution(unsigned char * buffer, struct solution *theSolution) {
 	int RFREQ_int = ((buffer[2] & 0xf0) >> 4) + ((buffer[1] & 0x3f) * 16);
 	int RFREQ_frac = (256 * 256 * 256 * (buffer[2] & 0xf)) + (256 * 256 * buffer[3]) + (256 * buffer[4]) + (buffer[5]);
-	double RFREQ = RFREQ_int + (RFREQ_frac / 268435456.0);
-	int N1 = ((buffer[1] & 0xc0 ) >> 6) + ((buffer[0] & 0x1f) * 4);
-	int HS_DIV = (buffer[0] & 0xE0) >> 5;
-	double fout = fXtall * RFREQ / ((N1 + 1) * HS_DIV_MAP[HS_DIV]);
-	
+	theSolution->RFREQ = RFREQ_int + (RFREQ_frac / 268435456.0);
+	theSolution->N1 = ((buffer[1] & 0xc0 ) >> 6) + ((buffer[0] & 0x1f) * 4);
+	theSolution->HS_DIV = (buffer[0] & 0xE0) >> 5;
 	if (verbose >= 2) {
-	   printf("RFREQ = %f\n", RFREQ);
-	   printf("N1 = %d\n", N1);
-	   printf("HS_DIV = %d\n", HS_DIV);
-	   printf("nHS_DIV = %d\n", HS_DIV_MAP[HS_DIV]);
+	   printf("RFREQ = %f\n", theSolution->RFREQ);
+	   printf("N1 = %d\n", theSolution->N1);
+	   printf("HS_DIV = %d\n", theSolution->HS_DIV);
+	   printf("nHS_DIV = %d\n", HS_DIV_MAP[theSolution->HS_DIV]);
+	}
+}
+
+double solutionToFrequency(struct solution *theSolution) {
+	double fout = fXtall * theSolution->RFREQ / ((theSolution->N1 + 1) * HS_DIV_MAP[theSolution->HS_DIV]);
+	if (verbose >= 2) {
 	   printf("fout = %f\n", fout);
 	}
-
 	return fout;
+}
+
+int frequencyToSolution(double f, int i, struct solution *sol) {
+	double y;
+	sol->HS_DIV = i;
+	y = (SI570_DCO_HIGH + SI570_DCO_LOW) / (2 * f);
+	y = y / HS_DIV_MAP[i];
+	if (y < 1.5) {
+		y = 1.0;
+	} else {
+		y = 2 * round ( y / 2.0);
+	}
+	if (y > 128) {
+		y = 128;
+	}
+	sol->N1 = trunc(y) - 1;
+	// this is the bug, f0 should be f * (N1+1) * HS_DIV_MAP[i]
+	// sol->f0 = f * y * HS_DIV_MAP[i];
+	sol->f0 = f * (sol->N1+1) * HS_DIV_MAP[i];
+	if (sol->f0 >= SI570_DCO_LOW && sol->f0 <= SI570_DCO_HIGH) {
+		sol->RFREQ = sol->f0 / fXtall;
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+double calculateFrequency(unsigned char * buffer) {
+	struct solution theSolution;
+	registersToSolution(buffer, &theSolution);  
+	return solutionToFrequency(&theSolution);
 }
 
 unsigned short readVersion(usb_dev_handle *handle) {
@@ -298,40 +332,16 @@ void setPTT(usb_dev_handle *handle, int value) {
 }
 
 int calcAllDividers(double f, struct solution sols[8]) {
-	int i;
-	double y;
-	int n;
-	  
+	int i, n;
 	
 	// Count down through the dividers
 	n = 0;
 	for (i=7;i >= 0;i--) {
-		
+		sols[i].f0 = 10000000000000000.0;
 		if (HS_DIV_MAP[i] > 0) {
-			sols[i].HS_DIV = i;
-			y = (SI570_DCO_HIGH + SI570_DCO_LOW) / (2 * f);
-			y = y / HS_DIV_MAP[i];
-			if (y < 1.5) {
-				y = 1.0;
-			} else {
-				y = 2 * round ( y / 2.0);
-			}
-			if (y > 128) {
-				y = 128;
-			}
-			sols[i].N1 = trunc(y) - 1;
-			sols[i].f0 = f * y * HS_DIV_MAP[i];
-			if ((sols[i].f0 < SI570_DCO_LOW) || (sols[i].f0 > SI570_DCO_HIGH)) {
-			  sols[i].f0 = 10000000000000000.0;
-			} else {
-			  sols[i].RFREQ = sols[i].f0 / fXtall;
-			  n += 1;
-			}
-		} else {
-			sols[i].f0 = 10000000000000000.0;
+			n += frequencyToSolution(f, i, &sols[i]);
 		}
 	}
-	return n;
 }
 
 int calcDividers(double f, struct solution* solution)
@@ -397,15 +407,17 @@ void solutionToRegisters(struct solution theSolution, unsigned char buffer[6]) {
 	buffer[0] = theSolution.N1 / 4;
 	buffer[0] = buffer[0] + (theSolution.HS_DIV << 5);
 }
+
 void setSolution(usb_dev_handle * handle, struct solution theSolution) {
-	char buffer[6];
+	unsigned char buffer[6];
 	int request = REQUEST_SET_FREQ;
 	int value = 0x700 + i2cAddress;
 	int index = 0;
 	solutionToRegisters(theSolution, buffer);
+	if (verbose >= 2)
+	  printf("Setting Si570 registers to: %d %d %d %d %d %d\n", buffer[0], buffer[1], buffer[2], buffer[3], buffer[4], buffer[5]);
 	if (usb_control_msg(handle, USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT, request, value, index, buffer, sizeof(buffer), 5000)) {
 		if (verbose >= 2) printBuffer(buffer, 2);
-		
 	} else {
 		fprintf(stderr, "Failed writing frequency to device\n");
 	}
