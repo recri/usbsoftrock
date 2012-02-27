@@ -483,11 +483,11 @@ int main(int argc, char **argv) {
       else
         setFrequency(handle, atof(argv[optind+2]));
       
-    } else if (strcmp(argv[optind+1], "registers") == 0 || strcmp(argv[optind+1], "regs") == 0 && argc == optind+8) {
+    } else if ((strcmp(argv[optind+1], "registers") == 0 || strcmp(argv[optind+1], "regs") == 0) && argc == optind+8) {
       unsigned char regs[6];
       int i;
       for (i = 0; i < 6; i += 1)
-	regs[i] = strtol(argv[2+i], NULL, 0);
+	regs[i] = strtol(argv[optind+2+i], NULL, 0);
       setRegisters(handle, regs);
     } else if ((strcmp(argv[optind+1], "si570_addr") == 0) && (argc >= optind + 2)) {
       
