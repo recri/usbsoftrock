@@ -379,11 +379,7 @@ void setLongWord( int value, char * bytes)
 	bytes[3] = ((value & 0xff000000) >> 24) & 0xff;
 } 
 
-void setSolution(usb_dev_handle * handle, struct solution theSolution) {
-	char buffer[6];
-	int request = REQUEST_SET_FREQ;
-	int value = 0x700 + i2cAddress;
-	int index = 0;
+void solutionToRegisters(struct solution theSolution, unsigned char buffer[6]) {
 	int RFREQ_int = trunc(theSolution.RFREQ);
 	int RFREQ_frac = round((theSolution.RFREQ - RFREQ_int)*268435456);
 	unsigned char fracBuffer[4];
@@ -400,7 +396,13 @@ void setSolution(usb_dev_handle * handle, struct solution theSolution) {
 	buffer[1] = buffer[1] + ((theSolution.N1 & 3) << 6);
 	buffer[0] = theSolution.N1 / 4;
 	buffer[0] = buffer[0] + (theSolution.HS_DIV << 5);
-	
+}
+void setSolution(usb_dev_handle * handle, struct solution theSolution) {
+	char buffer[6];
+	int request = REQUEST_SET_FREQ;
+	int value = 0x700 + i2cAddress;
+	int index = 0;
+	solutionToRegisters(theSolution, buffer);
 	if (usb_control_msg(handle, USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT, request, value, index, buffer, sizeof(buffer), 5000)) {
 		if (verbose >= 2) printBuffer(buffer, 2);
 		
@@ -440,7 +442,11 @@ void solveRegisters(usb_dev_handle * handle) {
   n = calcAllDividers(getFrequency(handle), solutions);
   for (int i = 0; i < 8; i += 1) {
     if (solutions[i].f0 >= SI570_DCO_LOW && solutions[i].f0 <= SI570_DCO_HIGH) {
-      printf("HS_DIV %d N1 %d RFREQ %20.18f\n", solutions[i].HS_DIV, solutions[i].N1, solutions[i].RFREQ);
+      unsigned char regs[6];
+      solutionToRegisters(solutions[i], regs);
+      printf("HS_DIV %d N1 %d RFREQ %20.18f : %d %d %d %d %d %d\n",
+	     solutions[i].HS_DIV, solutions[i].N1, solutions[i].RFREQ,
+	     regs[0], regs[1], regs[2], regs[3], regs[4], regs[5]);
     }
   }
 }
