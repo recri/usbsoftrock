@@ -1,0 +1,7 @@
+* usbsoftrock
+  This is a derivation of the usbsoftrock project hosted at code.google.com/p/softrock.
+
+  The principle changes are:
+
+** set registers
+   a command for directly setting the Si570 registers.
