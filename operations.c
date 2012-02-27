@@ -297,15 +297,14 @@ void setPTT(usb_dev_handle *handle, int value) {
 	usb_control_msg(handle, USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, REQUEST_SET_PTT, value, 0, (char *)buffer, sizeof(buffer), 5000);
 }
 
-int calcDividers(double f, struct solution* solution)
-{
-	struct solution sols[8]; 
+int calcAllDividers(double f, struct solution sols[8]) {
 	int i;
 	double y;
-	int imin;
-	double fmin;
+	int n;
+	  
 	
 	// Count down through the dividers
+	n = 0;
 	for (i=7;i >= 0;i--) {
 		
 		if (HS_DIV_MAP[i] > 0) {
@@ -322,12 +321,27 @@ int calcDividers(double f, struct solution* solution)
 			}
 			sols[i].N1 = trunc(y) - 1;
 			sols[i].f0 = f * y * HS_DIV_MAP[i];
+			if ((sols[i].f0 < SI570_DCO_LOW) || (sols[i].f0 > SI570_DCO_HIGH)) {
+			  sols[i].f0 = 10000000000000000.0;
+			} else {
+			  sols[i].RFREQ = sols[i].f0 / fXtall;
+			  n += 1;
+			}
 		} else {
 			sols[i].f0 = 10000000000000000.0;
 		}
 	}
-	imin = -1;
-	fmin = 10000000000000000.0;
+	return n;
+}
+
+int calcDividers(double f, struct solution* solution)
+{
+	struct solution sols[8]; 
+	int i;
+	int imin = -1;
+	double fmin = 10000000000000000.0;
+
+	calcAllDividers(f, sols);
 		
 	for (i=0; i < 8; i++) {
 		if ((sols[i].f0 >= SI570_DCO_LOW) && (sols[i].f0 <= SI570_DCO_HIGH)) {
@@ -365,20 +379,11 @@ void setLongWord( int value, char * bytes)
 	bytes[3] = ((value & 0xff000000) >> 24) & 0xff;
 } 
 
-void setFrequency(usb_dev_handle * handle, double frequency)
-{
-	
+void setSolution(usb_dev_handle * handle, struct solution theSolution) {
 	char buffer[6];
 	int request = REQUEST_SET_FREQ;
 	int value = 0x700 + i2cAddress;
 	int index = 0;
-	double f = frequency * multiplier;
-	if (verbose)
-		printf("Setting Si570 Frequency by registers to: %f\n", f);
-	
-	struct solution theSolution;
-	calcDividers(f, &theSolution); 
-	
 	int RFREQ_int = trunc(theSolution.RFREQ);
 	int RFREQ_frac = round((theSolution.RFREQ - RFREQ_int)*268435456);
 	unsigned char fracBuffer[4];
@@ -403,6 +408,17 @@ void setFrequency(usb_dev_handle * handle, double frequency)
 		fprintf(stderr, "Failed writing frequency to device\n");
 	}
 }
+void setFrequency(usb_dev_handle * handle, double frequency)
+{
+	
+	double f = frequency * multiplier;
+	if (verbose)
+		printf("Setting Si570 Frequency by registers to: %f\n", f);
+	
+	struct solution theSolution;
+	calcDividers(f, &theSolution); 
+	setSolution(handle, theSolution);
+}
 
 void setRegisters(usb_dev_handle * handle, unsigned char regs[6])
 {
@@ -411,11 +427,45 @@ void setRegisters(usb_dev_handle * handle, unsigned char regs[6])
   int index = 0;
   if (verbose)
     printf("Setting Si570 registers to: %d %d %d %d %d %d\n", regs[0], regs[1], regs[2], regs[3], regs[4], regs[5]);
-	
   if (usb_control_msg(handle, USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_OUT, request, value, index, regs, sizeof(regs), 5000)) {
     if (verbose >= 2) printBuffer(regs, 2);
   } else {
     fprintf(stderr, "Failed writing frequency to device\n");
+  }
+}
+
+void solveRegisters(usb_dev_handle * handle) {
+  struct solution solutions[8];
+  int i, n;
+  n = calcAllDividers(getFrequency(handle), solutions);
+  for (int i = 0; i < 8; i += 1) {
+    if (solutions[i].f0 >= SI570_DCO_LOW && solutions[i].f0 <= SI570_DCO_HIGH) {
+      printf("HS_DIV %d N1 %d RFREQ %20.18f\n", solutions[i].HS_DIV, solutions[i].N1, solutions[i].RFREQ);
+    }
+  }
+}
+
+void tweakRegisters(usb_dev_handle * handle) {
+  unsigned char buffer[6];
+  int nBytes;
+  struct solution solutions[8];
+  int i, n, HS_DIV;
+  double f;
+
+  nBytes = usb_control_msg(handle, USB_TYPE_VENDOR | USB_RECIP_DEVICE | USB_ENDPOINT_IN, REQUEST_READ_REGISTERS, SI570_I2C_ADDR, 0, (char *)buffer, sizeof(buffer), 5000);
+
+  if (nBytes > 0) {
+    f = calculateFrequency(buffer);
+    HS_DIV = (buffer[0] & 0xE0) >> 5;
+    n = calcAllDividers(f, solutions);
+    if (n > 1) {
+      for (int i = HS_DIV+1; i != HS_DIV; i = (i+1)&7) {
+	if (solutions[i].f0 >= SI570_DCO_LOW && solutions[i].f0 <= SI570_DCO_HIGH) {
+	  setSolution(handle, solutions[i]);
+	  break;
+	}
+      }
+    }
   }
 }
 

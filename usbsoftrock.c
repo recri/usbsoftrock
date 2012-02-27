@@ -218,12 +218,14 @@ else if ((strcmp(argv[0], "set") == 0) && (argc >= 2)) {
       
     } else if (strcmp(argv[1], "local_multiplier") == 0) {
       multiplier = atof(argv[2]);
-    } else if (strcmp(argv[1], "registers") == 0 || strcmp(argv[1], "regs") == 0) {
+    } else if (strcmp(argv[1], "registers") == 0 || strcmp(argv[1], "regs") == 0 && argc == 8) {
       unsigned char regs[6];
       int i;
       for (i = 0; i < 6; i += 1)
 	regs[i] = strtol(argv[2+i], NULL, 0);
       setRegisters(handle, regs);
+    } else if (strcmp(argv[1], "tweak") == 0) {
+      tweakRegisters(handle);
     } else {
       sprintf(result, "error");
       return -1;
@@ -479,6 +481,12 @@ int main(int argc, char **argv) {
       else
         setFrequency(handle, atof(argv[optind+2]));
       
+    } else if (strcmp(argv[optind+1], "registers") == 0 || strcmp(argv[optind+1], "regs") == 0 && argc == optind+8) {
+      unsigned char regs[6];
+      int i;
+      for (i = 0; i < 6; i += 1)
+	regs[i] = strtol(argv[2+i], NULL, 0);
+      setRegisters(handle, regs);
     } else if ((strcmp(argv[optind+1], "si570_addr") == 0) && (argc >= optind + 2)) {
       
       setSi570Address(handle, atoi(argv[optind+2]));
@@ -513,6 +521,8 @@ int main(int argc, char **argv) {
 	exit(1);
     }
 
+  } else if (strcmp(argv[optind], "solutions") == 0) {
+    solveRegisters(handle);
   } else if (strcmp(argv[optind], "status") == 0) {
 
 	printf("USB SerialID: %s\n", serialNumberString);
@@ -541,6 +551,8 @@ int main(int argc, char **argv) {
 		//displayBPFFilters(handle);
 		//displayLPFFilters(handle);*/
 	}
+  } else if (strcmp(argv[optind+1], "tweak") == 0) {
+    tweakRegisters(handle);
   } else {
 	usage(argv[0]);
 	exit(1);
