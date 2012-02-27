@@ -551,7 +551,7 @@ int main(int argc, char **argv) {
 		//displayBPFFilters(handle);
 		//displayLPFFilters(handle);*/
 	}
-  } else if (strcmp(argv[optind+1], "tweak") == 0) {
+  } else if (strcmp(argv[optind], "tweak") == 0) {
     tweakRegisters(handle);
   } else {
 	usage(argv[0]);
