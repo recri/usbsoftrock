@@ -137,6 +137,8 @@ static void usage(char *name)
   fprintf(stderr, "  set si570_multiplier [band] <decimal factor>  (PE0FKO>=15.12+Mobo)\n");
   fprintf(stderr, "  set startup <frequency in MHz>         (PE0FKO+TF3LJ+Mobo)\n");
   fprintf(stderr, "  set xtall <frequency in MHz>           (PE0FKO+TF3LJ+Mobo)\n");
+  fprintf(stderr, "  solutions\n");
+  fprintf(stderr, "  tweak\n");
   fprintf(stderr, "  status\n\n");
   fprintf(stderr, "  where TF3LJ = Lofturs AtMega168 derivative\n");
   fprintf(stderr, "        Mobo  = Mobo 4.3 Project AT90USB162 Firmware\n");

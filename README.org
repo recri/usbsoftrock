@@ -8,9 +8,14 @@
   set registers <reg0> <reg1> <reg2> <reg3> <reg4> <reg5>
   - a command for directly setting the Si570 registers.
 
-  solutions <frequency in MHz>
-  - print the set of register values that tune the specified frequency.
+  solutions
+  - print the set of register values that tune the currently tuned
+    frequency.
 
   tweak
   - get the current tuning registers, compute the frequency, and set the
     registers to the next solution that tunes the same frequency.
+
+    The roundtrip for computing frequency from register values and new
+    register values from frequency aren't exact inverses, so the frequency
+    tends to edge upwards.
