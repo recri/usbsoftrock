@@ -96,5 +96,11 @@ int calcDividers(double f, struct solution* solution);
 
 void setFrequency(usb_dev_handle * handle, double frequency);
 
+extern void setRegisters(usb_dev_handle *handle, unsigned char regs[6]);
+
+extern void solveRegisters(usb_dev_handle * handle);
+
+extern void tweakRegisters(usb_dev_handle * handle);
+
 void setFreqByValue(usb_dev_handle * handle, double frequency);
 
