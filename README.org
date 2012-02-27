@@ -3,23 +3,25 @@
 
   The source was pulled from the svn repository there on 2012-02-26.
 
-  The principle changes are three new commands:
+  The principle changes will be three new commands:
 
   set registers <reg0> <reg1> <reg2> <reg3> <reg4> <reg5>
   - a command for directly setting the Si570 registers.
+    that doesn't appear to work.
 
   solutions
   - print the set of register values that tune the currently tuned
     frequency.
+    that doesn't find the exact current register values among the set.
 
   tweak
   - get the current tuning registers, compute the frequency, and set the
     registers to the next solution that tunes the same frequency.
 
-    The roundtrip for computing frequency from register values and new
-    register values from frequency aren't exact inverses, so the frequency
-    tends to edge upwards.
+    Well, almost, the frequency tends to edge upwards for reasons as yet
+    unknown.
 
  Other changes involved refactoring the functions that compute register values
  from frequencies and frequencies from register values, so these computations
  would all use the same logic.
+
