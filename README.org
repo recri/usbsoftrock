@@ -1,9 +1,9 @@
 * usbsoftrock
   This is a derivation of the usbsoftrock project hosted at code.google.com/p/softrock.
 
-  The source was pulled from svn on 2012-02-26
+  The source was pulled from the svn repository there on 2012-02-26.
 
-  The principle changes are:
+  The principle changes are three new commands:
 
   set registers <reg0> <reg1> <reg2> <reg3> <reg4> <reg5>
   - a command for directly setting the Si570 registers.
@@ -19,3 +19,7 @@
     The roundtrip for computing frequency from register values and new
     register values from frequency aren't exact inverses, so the frequency
     tends to edge upwards.
+
+ Other changes involved refactoring the functions that compute register values
+ from frequencies and frequencies from register values, so these computations
+ would all use the same logic.
